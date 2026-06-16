@@ -4,7 +4,6 @@ local workerUrl = "https://patient-haze-78f2.kokor-yevhen.workers.dev"
 
 -- === ГЕНЕРАЦІЯ ID ===
 local uniqueSessionID = math.random(10000000, 99999999)
-print("✅ Твій Session ID: " .. uniqueSessionID)
 
 -- === ФУНКЦІЯ ЛОГІВ ===
 local function logExecution()
@@ -102,4 +101,4 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
 	Duration = 5;
 })
 
-print("✅ Smile Mod Menu завантажено з ID: " .. uniqueSessionID)
+print("✅ Smile Mod Menu завантажено")
