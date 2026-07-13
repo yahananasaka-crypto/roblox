@@ -553,14 +553,6 @@ G.silentAimButton.MouseButton1Click:Connect(function()
     end
 end)
 
-G.smoothButton.MouseButton1Click:Connect(function()
-    if F.canClick() then
-        F.setSmoothToggle(not F.getSmoothToggle())
-        G.smoothButton.Text = F.getSmoothToggle() and "Smooth: ON" or "Smooth: OFF"
-        G.smoothButton.BackgroundColor3 = F.getSmoothToggle() and Color3.fromRGB(0,180,0) or Color3.fromRGB(40,40,40)
-    end
-end)
-
 end
 
 return init
