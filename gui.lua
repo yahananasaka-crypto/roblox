@@ -8,7 +8,7 @@ for _ = 1, 8 do _tag = _tag .. _c:sub(math.random(1, #_c), math.random(1, #_c)) 
 local function n(l)
     l = l or math.random(10, 18)
     local r = ""
-    for _ = 1, l do r = r .. _c:sub(math.random(1, #_c), math.random(1, #c)) end
+    for _ = 1, l do r = r .. _c:sub(math.random(1, #_c)) end
     return r
 end
 
