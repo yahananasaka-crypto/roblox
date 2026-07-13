@@ -1,85 +1,100 @@
 -- ============================================================
---   main.lua — лоадер всіх модулів
+--   main.lua — виправлена версія
 -- ============================================================
-
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Назви файлів (якщо локальні)
-local GUI_FILE = "gui.lua"
-local FUNCTIONS_FILE = "functions.lua"
-local BUTTONS_FILE = "buttons.lua"
-
--- GitHub raw URLs
+-- ВИПРАВЛЕНІ URL (була опечатка heads/heads)
 local GUI_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/gui.lua"
-local FUNCTIONS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/heads/main/functions.lua"
+local FUNCTIONS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/functions.lua"
 local BUTTONS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/buttons.lua"
+
+-- Локальні шляхи (перевір різних варіантів)
+local LOCAL_PATHS = {
+    "gui.lua", "/gui.lua", "gui.lua.txt", "/gui.lua.txt",
+    "functions.lua", "/functions.lua", "functions.lua.txt", "/functions.lua.txt",
+    "buttons.lua", "/buttons.lua", "buttons.lua.txt", "/buttons.txt"
+}
 
 local function loadFromGitHub(url)
     local success, result = pcall(function()
         return HttpService:GetAsync(url)
     end)
     if not success then
-        warn("[Smile] Failed to load from GitHub: " .. url)
+        warn("[Smile] GitHub failed: " .. tostring(result))
         return nil
     end
     return result
 end
 
 local function loadLocal(filename)
-    if not isfile(filename) then return nil end
-    local success, result = pcall(function()
-        return readfile(filename)
-    end)
-    if not success then
-        warn("[Smile] Failed to read local file: " .. filename)
-        return nil
+    -- Спробуємо різні варіанти шляху
+    local pathsToTry = {
+        filename,
+        "workspace/" .. filename,
+        filename .. ".lua",
+        "workspace/" .. filename .. ".lua"
+    }
+    
+    for _, path in ipairs(pathsToTry) do
+        if isfile(path) then
+            local success, result = pcall(function()
+                return readfile(path)
+            end)
+            if success and result then
+                return result
+            end
+        end
     end
-    return result
+    return nil
 end
 
 local function loadModule(name, url, filename)
-    -- Спробуємо GitHub перш
+    -- Спочатку GitHub
     local code = loadFromGitHub(url)
+    local source = "GitHub"
     
-    -- Якщо GitHub не працює - локальний файл
+    -- Якщо GitHub не спрацював — локально
     if not code then
         code = loadLocal(filename)
+        source = "local file"
     end
     
     if not code then
-        error("[Smile] Could not load " .. name .. " from GitHub or local file")
+        error("[Smile] " .. name .. " not found from GitHub or local.\n\nLocal files must be in executor workspace folder:\n• gui.lua\n• functions.lua\n• buttons.lua\n\nOr check GitHub repo access.", 0)
     end
     
     local fn, err = loadstring(code)
     if not fn then
-        error("[Smile] Syntax error in " .. name .. ": " .. tostring(err))
+        error("[Smile] Syntax error in " .. name .. " (" .. source .. "): " .. tostring(err), 0)
     end
     
-    return fn()
+    -- Виконуємо модуль
+    local module = fn()
+    
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Smile Mod Menu",
+            Text = name .. " loaded from " .. source,
+            Duration = 2
+        })
+    end)
+    
+    return module
 end
 
 -- ============================================================
 --   ІНІЦІАЛІЗАЦІЯ
 -- ============================================================
 local success, err = pcall(function()
-    -- 1. Завантажити GUI — повертає таблицю G
-    local G = loadModule("GUI", GUI_URL, GUI_FILE)
-    
-    -- 2. Завантажити Functions — повертає функцію init(G, V)
-    local functionsInit = loadModule("Functions", FUNCTIONS_URL, FUNCTIONS_FILE)
-    
-    -- 3. Викликати functions з G та пустим V (для зворотної сумісності)
+    local G = loadModule("GUI", GUI_URL, "gui.lua")
+    local functionsInit = loadModule("Functions", FUNCTIONS_URL, "functions.lua")
     local F = functionsInit(G, {})
-    
-    -- 4. Завантажити Buttons — повертає функцію init(G, F)
-    local buttonsInit = loadModule("Buttons", BUTTONS_URL, BUTTONS_FILE)
-    
-    -- 5. Викликати buttons з G та F
+    local buttonsInit = loadModule("Buttons", BUTTONS_URL, "buttons.lua")
     buttonsInit(G, F)
-    
-    -- 6. Драг для головного фрейму
+
+    -- Драг головного фрейму
     local dragging, dragInput, dragStart, startPos
     G.frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -104,8 +119,8 @@ local success, err = pcall(function()
             dragging = false
         end
     end)
-    
-    -- 7. Драг для мінімізованого круга
+
+    -- Драг мінімізованого круга
     local cDrag, cInput, cStart, cPos
     G.minimizedCircle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -133,108 +148,67 @@ local success, err = pcall(function()
             cDrag = false
         end
     end)
+
+    -- Мобільні кнопки
+    local VIM = game:GetService("VirtualInputManager")
     
-    -- 8. Мобільні кнопки WASD + Space
-    if G.mobileWBtn then
-        G.mobileWBtn.InputBegan:Connect(function(input)
+    local function mobileKey(btn, keyCode)
+        if not btn then return end
+        btn.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.W, false, game)
+                VIM:SendKeyEvent(true, keyCode, false, game)
             end
         end)
-        G.mobileWBtn.InputEnded:Connect(function(input)
+        btn.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.W, false, game)
+                VIM:SendKeyEvent(false, keyCode, false, game)
             end
         end)
     end
     
-    if G.mobileABtn then
-        G.mobileABtn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.A, false, game)
-            end
-        end)
-        G.mobileABtn.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.A, false, game)
-            end
-        end)
-    end
-    
-    if G.mobileSBtn then
-        G.mobileSBtn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.S, false, game)
-            end
-        end)
-        G.mobileSBtn.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.S, false, game)
-            end
-        end)
-    end
-    
-    if G.mobileDBtn then
-        G.mobileDBtn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.D, false, game)
-            end
-        end)
-        G.mobileDBtn.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.D, false, game)
-            end
-        end)
-    end
+    mobileKey(G.mobileWBtn, Enum.KeyCode.W)
+    mobileKey(G.mobileABtn, Enum.KeyCode.A)
+    mobileKey(G.mobileSBtn, Enum.KeyCode.S)
+    mobileKey(G.mobileDBtn, Enum.KeyCode.D)
     
     if G.mobileSpaceFrame then
         G.mobileSpaceFrame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
             end
         end)
         G.mobileSpaceFrame.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch then
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
             end
         end)
     end
-    
-    -- 9. Slider логіка для FOV, Speed, Aim FOV, Smooth
+
+    -- Slider логіка
     local function setupSlider(sliderFrame, sliderButton, inputField, minVal, maxVal, callback)
         local sliderDragging = false
         local sliderInput = nil
-        
         sliderFrame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 sliderDragging = true
                 sliderInput = input
             end
         end)
-        
         sliderFrame.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 sliderDragging = false
                 sliderInput = nil
             end
         end)
-        
         sliderFrame.InputChanged:Connect(function(input)
             if not sliderDragging or sliderInput ~= input then return end
             if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-            
             local rel = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
             sliderButton.Position = UDim2.new(rel, -10, 0, -2.5)
-            
             local value = minVal + (maxVal - minVal) * rel
-            if inputField then
-                inputField.Text = math.floor(value)
-            end
-            if callback then
-                callback(value)
-            end
+            if inputField then inputField.Text = math.floor(value) end
+            if callback then callback(value) end
         end)
-        
         if inputField then
             inputField.FocusLost:Connect(function()
                 local num = tonumber(inputField.Text)
@@ -247,46 +221,29 @@ local success, err = pcall(function()
             end)
         end
     end
-    
-    -- Speed slider
-    setupSlider(G.sliderFrame, G.sliderButton, G.speedInput, 1, 500, function(val)
-        pcall(function() F.getSpeed() end) -- просто оновлює значення
-    end)
-    
-    -- FOV slider
-    setupSlider(G.fovSliderFrame, G.fovSliderButton, G.fovInput, 1, 120, function(val)
-        pcall(function() F.getFovChanger() end)
-    end)
-    
-    -- Aim FOV slider
-    setupSlider(G.aimFOVSliderFrame, G.aimFOVSliderButton, G.aimFOVInput, 1, 360, function(val)
-        -- Оновити FieldOfView в functions
-    end)
-    
-    -- Smooth slider
-    setupSlider(G.smoothSliderFrame, G.smoothSliderButton, G.smoothInput, 0.01, 1, function(val)
-        -- Оновити smoothValue в functions
-    end)
-    
-    -- 10. Нотифікація про завантаження
+
+    setupSlider(G.sliderFrame, G.sliderButton, G.speedInput, 1, 500, function() end)
+    setupSlider(G.fovSliderFrame, G.fovSliderButton, G.fovInput, 1, 120, function() end)
+    setupSlider(G.aimFOVSliderFrame, G.aimFOVSliderButton, GaimFOVInput, 1, 360, function() end)
+    setupSlider(G.smoothSliderFrame, G.smoothSliderButton, G.smoothInput, 0.01, 1, function() end)
+
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Smile Mod Menu",
-            Text = "Loaded successfully!",
+            Text = "All modules loaded!",
             Duration = 3
         })
     end)
-    
-    print("[Smile Mod Menu] All modules loaded and initialized")
+    print("[Smile Mod Menu] Successfully initialized")
 end)
 
 if not success then
-    warn("[Smile Mod Menu] Failed to initialize: " .. tostring(err))
+    warn("[Smile] Error: " .. tostring(err))
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Smile Mod Menu",
-            Text = "Failed to load: " .. tostring(err),
-            Duration = 5
+            Text = "Error: " .. tostring(err),
+            Duration = 10
         })
     end)
 end
