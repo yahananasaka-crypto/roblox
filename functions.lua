@@ -1149,273 +1149,65 @@ local function stopSpeedHack()
     end
 end
 
--- ======================================================
--- FOV CHANGER
--- ======================================================
-local function startFOVChanger()
-    pcall(function() currentFOV = tonumber(G.fovInput.Text) or 70 end)
-    fovChangerConnection = RunService.RenderStepped:Connect(function()
-        Camera.FieldOfView = currentFOV
-    end)
-end
+-- ============================================================
+--   СТВОРЕННЯ ТАБЛИЦІ F (ЯКУ ЧЕКАЄ buttons.lua)
+-- ============================================================
+local F = {}
 
-local function stopFOVChanger()
-    if fovChangerConnection then fovChangerConnection:Disconnect(); fovChangerConnection = nil end
-    Camera.FieldOfView = 70
-end
-
--- ======================================================
--- NOCLIP
--- ======================================================
-local function startNoclip()
-    noclipConnection = RunService.Stepped:Connect(function()
-        if LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end
-    end)
-end
-
-local function stopNoclip()
-    if noclipConnection then noclipConnection:Disconnect(); noclipConnection = nil end
-end
-
--- ======================================================
--- GOD MODE
--- ======================================================
-local function startGodMode()
-    godModeConnection = RunService.Heartbeat:Connect(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Health = LocalPlayer.Character:FindFirstChildOfClass("Humanoid").MaxHealth
-        end
-    end)
-end
-
-local function stopGodMode()
-    if godModeConnection then godModeConnection:Disconnect(); godModeConnection = nil end
-end
-
--- ======================================================
--- ESP VAL CHECK / AIM VAL CHECK LISTS
--- ======================================================
-local function updateEspValCheckList()
-    for _, child in pairs(G.espValCheckScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    local yPos = 5
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local isSelected = espValCheckTargets[player.Name] == true
-            local btn = Instance.new("TextButton", G.espValCheckScroll)
-            btn.Size = UDim2.new(0.9, 0, 0, 30)
-            btn.Position = UDim2.new(0.05, 0, 0, yPos)
-            btn.BackgroundColor3 = isSelected and Color3.fromRGB(0,180,0) or Color3.fromRGB(50,50,50)
-            btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = Enum.Font.SourceSans
-            btn.TextSize = 14
-            btn.Text = (isSelected and "✅ " or "⬜ ") .. player.Name
-            Instance.new("UICorner", btn)
-            btn.MouseButton1Click:Connect(function()
-                espValCheckTargets[player.Name] = not espValCheckTargets[player.Name]
-                btn.BackgroundColor3 = espValCheckTargets[player.Name] and Color3.fromRGB(0,180,0) or Color3.fromRGB(50,50,50)
-                btn.Text = (espValCheckTargets[player.Name] and "✅ " or "⬜ ") .. player.Name
-            end)
-            yPos = yPos + 35
-        end
-    end
-    G.espValCheckScroll.CanvasSize = UDim2.new(0, 0, 0, yPos)
-end
-
-local function updateAimValCheckList()
-    for _, child in pairs(G.aimValCheckScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    local yPos = 5
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local isSelected = aimValCheckTargets[player.Name] == true
-            local btn = Instance.new("TextButton", G.aimValCheckScroll)
-            btn.Size = UDim2.new(0.9, 0, 0, 30)
-            btn.Position = UDim2.new(0.05, 0, 0, yPos)
-            btn.BackgroundColor3 = isSelected and Color3.fromRGB(0,180,0) or Color3.fromRGB(50,50,50)
-            btn.TextColor3 = Color3.new(1,1,1)
-            btn.Font = Enum.Font.SourceSans
-            btn.TextSize = 14
-            btn.Text = (isSelected and "✅ " or "⬜ ") .. player.Name
-            Instance.new("UICorner", btn)
-            btn.MouseButton1Click:Connect(function()
-                aimValCheckTargets[player.Name] = not aimValCheckTargets[player.Name]
-                btn.BackgroundColor3 = aimValCheckTargets[player.Name] and Color3.fromRGB(0,180,0) or Color3.fromRGB(50,50,50)
-                btn.Text = (aimValCheckTargets[player.Name] and "✅ " or "⬜ ") .. player.Name
-            end)
-            yPos = yPos + 35
-        end
-    end
-    G.aimValCheckScroll.CanvasSize = UDim2.new(0, 0, 0, yPos)
-end
-
--- ======================================================
--- COLOR PICKER (ESP)
--- ======================================================
-local function setupColorPickerSliders()
-    local function makeSlider(slider, handle, preview, targetTable)
-        local dragging = false
-        local input = nil
-        slider.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                input = i
-            end
-        end)
-        slider.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-                input = nil
-            end
-        end)
-        slider.InputChanged:Connect(function(i)
-            if not dragging or input ~= i then return end
-            if i.UserInputType ~= Enum.UserInputType.MouseMovement and i.UserInputType ~= Enum.UserInputType.Touch then return end
-            local rel = math.clamp((i.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-            handle.Position = UDim2.new(rel, -9, 0, -1.5)
-            targetTable.value = math.floor(rel * 255)
-            preview.BackgroundColor3 = Color3.fromRGB(targetTable.r, targetTable.g, targetTable.b)
-            if espColorPickerTarget == "vis" then
-                espVisColor = preview.BackgroundColor3
-                G.espVisColorBtn.BackgroundColor3 = espVisColor
-            elseif espColorPickerTarget == "unvis" then
-                espUnvisColor = preview.BackgroundColor3
-                G.espUnvisColorBtn.BackgroundColor3 = espUnvisColor
-            end
-        end)
-    end
-    makeSlider(G.espRSlider, G.espRHandle, G.espColorPreview, {r=espRVal, g=espGVal, b=espBVal})
-    makeSlider(G.espGSlider, G.espGHandle, G.espColorPreview, {r=espRVal, g=espGVal, b=espBVal})
-    makeSlider(G.espBSlider, G.espBHandle, G.espColorPreview, {r=espRVal, g=espGVal, b=espBVal})
-end
-
-local function openCharmsColorPicker(type)
-    -- Similar logic for charms color picker
-end
-
-setupColorPickerSliders()
-
--- ======================================================
--- TRIGGER TOGGLE LOGIC
--- ======================================================
-local function togglePCTrigger(val)
-    pcTriggerEnabled = val
-    if val then startPCTrigger() else stopPCTrigger() end
-end
-
-local function toggleMobileTrigger(val)
-    mobileTriggerEnabled = val
-    if val then startMobileTrigger() else stopMobileTrigger() end
-end
-
--- ======================================================
--- RETURN ALL GETTERS/SETTERS
--- ======================================================
-return {
-    canClick = canClick,
-    updateTeleportList = updateTeleportList,
-    changeSky = changeSky,
-    startChaos = startChaos, stopChaos = stopChaos,
-    startThirdPerson = startThirdPerson, stopThirdPerson = stopThirdPerson,
-    startWallHop = startWallHop, stopWallHop = stopWallHop,
-    updatePlayerSelectList = updatePlayerSelectList,
-    startPCTrigger = startPCTrigger, stopPCTrigger = stopPCTrigger,
-    startMobileTrigger = startMobileTrigger, stopMobileTrigger = stopMobileTrigger,
-    enableFPSBoost = enableFPSBoost, disableFPSBoost = disableFPSBoost,
-    startAntiAFK = startAntiAFK, stopAntiAFK = stopAntiAFK,
-    enableFullbright = enableFullbright, disableFullbright = disableFullbright,
-    updateHitboxes = updateHitboxes, updateHitboxPartButtons = updateHitboxPartButtons,
-    startGodMode = startGodMode, stopGodMode = stopGodMode,
-    startFly = startFly, stopFly = stopFly,
-    startSpeedHack = startSpeedHack, stopSpeedHack = stopSpeedHack,
-    startFOVChanger = startFOVChanger, stopFOVChanger = stopFOVChanger,
-    startNoclip = startNoclip, stopNoclip = stopNoclip,
-    clearESP = clearESP,
-    openCharmsColorPicker = openCharmsColorPicker,
-    updateEspValCheckList = updateEspValCheckList,
-    updateAimValCheckList = updateAimValCheckList,
-    setHolding = function(v) Holding = v end,
-    getHolding = function() return Holding end,
-    setFovCircle = function(v) fovCircleEnabled = v end,
-    getFovCircle = function() return fovCircleEnabled end,
-    setWallCheck = function(v) WallCheckEnabled = v end,
-    getWallCheck = function() return WallCheckEnabled end,
-    setEsp = function(v) espEnabled = v end,
-    getEsp = function() return espEnabled end,
-    setCharms = function(v) charmsEnabled = v end,
-    getCharms = function() return charmsEnabled end,
-    setCharmsNpc = function(v) charmsNpcEnabled = v end,
-    getCharmsNpc = function() return charmsNpcEnabled end,
-    setCharmsEspObj = function(v) charmsEspObjEnabled = v end,
-    getCharmsEspObj = function() return charmsEspObjEnabled end,
-    setInfiniteJump = function(v) infiniteJumpEnabled = v end,
-    getInfiniteJump = function() return infiniteJumpEnabled end,
-    setInfiniteJumpConn = function(v) infiniteJumpConn = v end,
-    getInfiniteJumpConn = function() return infiniteJumpConn end,
-    setNoclip = function(v) if v then startNoclip() else stopNoclip() end end,
-    getNoclip = function() return noclipConnection ~= nil end,
-    setBunnyHop = function(v) bunnyHopEnabled = v end,
-    getBunnyHop = function() return bunnyHopEnabled end,
-    setChaos = function(v) chaosEnabled = v end,
-    getChaos = function() return chaosEnabled end,
-    setThirdPerson = function(v) thirdPersonEnabled = v end,
-    getThirdPerson = function() return thirdPersonEnabled end,
-    setWallHop = function(v) wallHopEnabled = v end,
-    getWallHop = function() return wallHopEnabled end,
-    setHitbox = function(v) hitboxEnabled = v end,
-    getHitbox = function() return hitboxEnabled end,
-    setHitboxPart = function(v) hitboxPart = v end,
-    setFullbright = function(v) fullbrightEnabled = v end,
-    getFullbright = function() return fullbrightEnabled end,
-    setGodMode = function(v) godModeEnabled = v end,
-    getGodMode = function() return godModeEnabled end,
-    setFpsBoost = function(v) fpsBoostEnabled = v end,
-    getFpsBoost = function() return fpsBoostEnabled end,
-    setAntiAfk = function(v) antiAfkEnabled = v end,
-    getAntiAfk = function() return antiAfkEnabled end,
-    setFly = function(v) flyEnabled = v end,
-    getFly = function() return flyEnabled end,
-    setSpeed = function(v) speedHackEnabled = v end,
-    getSpeed = function() return speedHackEnabled end,
-    setFovChanger = function(v) fovChangerEnabled = v end,
-    getFovChanger = function() return fovChangerEnabled end,
-    setPCTrigger = togglePCTrigger,
-    getPCTrigger = function() return pcTriggerEnabled end,
-    setMobileTrigger = toggleMobileTrigger,
-    getMobileTrigger = function() return mobileTriggerEnabled end,
-    setValCheck = function(v) valCheckEnabled = v end,
-    getValCheck = function() return valCheckEnabled end,
-    setTriggerWallCheck = function(v) triggerWallCheckEnabled = v end,
-    getTriggerWallCheck = function() return triggerWallCheckEnabled end,
-    setTriggerTeamCheck = function(v) triggerTeamCheckEnabled = v end,
-    getTriggerTeamCheck = function() return triggerTeamCheckEnabled end,
-    setEspColorTarget = function(v) espColorPickerTarget = v end,
-    setEspShowTracer = function(v) espShowTracer = v end,
-    getEspShowTracer = function() return espShowTracer end,
-    setEspShowBox = function(v) espShowBox = v end,
-    getEspShowBox = function() return espShowBox end,
-    setEspShowName = function(v) espShowName = v end,
-    getEspShowName = function() return espShowName end,
-    setEspShowHealth = function(v) espShowHealth = v end,
-    getEspShowHealth = function() return espShowHealth end,
-    setEspShowDist = function(v) espShowDist = v end,
-    getEspShowDist = function() return espShowDist end,
-    setEspTeamCheck = function(v) espTeamCheckEnabled = v end,
-    getEspTeamCheck = function() return espTeamCheckEnabled end,
-    setEspValCheck = function(v) espValCheckEnabled = v end,
-    getEspValCheck = function() return espValCheckEnabled end,
-    setAimValCheck = function(v) aimValCheckEnabled = v end,
-    getAimValCheck = function() return aimValCheckEnabled end,
-    setTeamCheck = function(v) teamCheckEnabled = v end,
-    getTeamCheck = function() return teamCheckEnabled end,
-    setSilentAim = function(v) silentAimEnabled = v end,
-    getSilentAim = function() return silentAimEnabled end,
-    setSmoothToggle = function(v) smoothToggle = v end,
-    getSmoothToggle = function() return smoothToggle end
+-- Автоматичні геттери/сеттери для всіх змінних
+local vars = {
+    Holding = false, FovCircle = false, WallCheck = false, Esp = false,
+    Charms = false, CharmsNpc = false, CharmsEspObj = false, InfiniteJump = false,
+    Noclip = false, BunnyHop = false, Chaos = false, ThirdPerson = false,
+    WallHop = false, Hitbox = false, Fullbright = false, GodMode = false,
+    FpsBoost = false, AntiAfk = false, Fly = false, Speed = false,
+    FovChanger = false, PCTrigger = false, MobileTrigger = false, ValCheck = false,
+    TriggerWallCheck = false, TriggerTeamCheck = false, EspShowTracer = true,
+    EspShowBox = true, EspShowName = true, EspShowHealth = true, EspShowDist = true,
+    EspTeamCheck = false, EspValCheck = false, AimValCheck = false, TeamCheck = false,
+    SilentAim = false, SmoothToggle = false, EspColorTarget = nil
 }
+
+for name, default in pairs(vars) do
+    local current = default
+    F["get"..name] = function() return current end
+    F["set"..name] = function(v) current = v end
+end
+
+F.getInfiniteJumpConn = function() return infiniteJumpConn end
+F.setInfiniteJumpConn = function(v) infiniteJumpConn = v end
+
+-- Додаємо існуючі функції в таблицю
+F.canClick = canClick
+F.updateTeleportList = updateTeleportList
+F.clearESP = clearESP
+F.changeSky = changeSky
+F.startChaos = startChaos
+F.stopChaos = stopChaos
+F.startThirdPerson = startThirdPerson
+F.stopThirdPerson = stopThirdPerson
+F.startWallHop = startWallHop
+F.stopWallHop = stopWallHop
+F.updateHitboxes = updateHitboxes
+F.setHitboxPart = function(v) hitboxPart = v end
+F.updateHitboxPartButtons = updateHitboxPartButtons
+F.enableFullbright = enableFullbright
+F.disableFullbright = disableFullbright
+F.startGodMode = function() end
+F.stopGodMode = function() end
+F.enableFPSBoost = enableFPSBoost
+F.disableFPSBoost = disableFPSBoost
+F.startAntiAFK = startAntiAFK
+F.stopAntiAFK = stopAntiAFK
+F.startFly = startFly
+F.stopFly = stopFly
+F.startSpeedHack = startSpeedHack
+F.stopSpeedHack = stopSpeedHack
+F.openCharmsColorPicker = function() end
+F.updatePlayerSelectList = updatePlayerSelectList
+F.updateEspValCheckList = function() end
+F.updateAimValCheckList = function() end
+
+return function(G, V)
+    return F
+end
