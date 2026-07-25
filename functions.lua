@@ -99,6 +99,11 @@ local function protectMetamethods()
     local ok, mt = pcall(getrawmetatable, game)
     if not ok or not mt then return end
 
+    -- КЕШУЄМО посилання ДО хука, щоб не викликати GetService всередині
+    local coreGuiRef = game:GetService("CoreGui")
+    local huiRef = gethui and gethui() or nil
+    local screenGuiRef = G.screenGui
+
     pcall(setreadonly, mt, false)
 
     local originalNamecall = mt.__namecall
@@ -108,13 +113,13 @@ local function protectMetamethods()
         local method = getnamecallmethod and getnamecallmethod() or ""
         if method == "GetChildren" or method == "GetDescendants" then
             local results = originalNamecall(self, ...)
-            if self == game:GetService("CoreGui") or (gethui and self == gethui()) then
+            if (self == coreGuiRef) or (huiRef and self == huiRef) then
                 local filtered = {}
                 for _, item in pairs(results) do
-                    if item ~= G.screenGui then
+                    if item ~= screenGuiRef then
                         local isDesc = false
                         pcall(function()
-                            if G.screenGui then isDesc = item:IsDescendantOf(G.screenGui) end
+                            if screenGuiRef then isDesc = item:IsDescendantOf(screenGuiRef) end
                         end)
                         if not isDesc then
                             table.insert(filtered, item)
@@ -123,6 +128,7 @@ local function protectMetamethods()
                 end
                 return filtered
             end
+            return results
         end
         return originalNamecall(self, ...)
     end
