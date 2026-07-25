@@ -63,7 +63,7 @@ end)
 task.spawn(logExecution)
 
 -- Твоє завантаження модулів
-local GUI_URL = "https://raw.githubusercontent.com/scp103/skript-/main/gui.lua"
+local GUI_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/gui.lua"
 local FUNC_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/functions.lua"
 local BTN_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/buttons.lua"
 local KEYS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/keybinds.lua"
