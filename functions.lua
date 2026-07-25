@@ -56,9 +56,6 @@ local function loadAllConfigs()
 end
 
 -- ========== ПРОКачаний АНТИ-ДЕТЕКТ ==========
-local HttpService = game:GetService("HttpService")
-
--- Стабільний генератор випадкових рядків
 local function genrandstr(length)
     length = length or math.random(14, 28)
     local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -70,7 +67,6 @@ local function genrandstr(length)
     return result
 end
 
--- Правдоподібні імена (імітують стандартні Roblox об'єкти)
 local fakeNames = {
     "Frame", "ScrollingFrame", "TextLabel", "TextButton",
     "UIListLayout", "UIGridLayout", "UICorner", "UIStroke",
@@ -82,7 +78,6 @@ local function getFakeName()
     return fakeNames[math.random(1, #fakeNames)]
 end
 
--- Глибоке перейменування всіх нащадків
 local function deepRename(parent, useFakeNames)
     for _, child in ipairs(parent:GetDescendants()) do
         if child:IsA("GuiObject") or child:IsA("UIBase") or child:IsA("Instance") then
@@ -95,7 +90,6 @@ local function deepRename(parent, useFakeNames)
     end
 end
 
--- Хук метаметодів для приховування від сканування
 local metamethodProtected = false
 local function protectMetamethods()
     if metamethodProtected then return end
@@ -142,7 +136,6 @@ local function protectMetamethods()
     pcall(setreadonly, mt, true)
 end
 
--- Головна функція безпеки
 local function startSecurity()
     protectMetamethods()
 
@@ -163,7 +156,6 @@ local function startSecurity()
         end
     end
 
-    -- Періодичне перейменування ScreenGui та топ-левел фреймів
     task.spawn(function()
         while task.wait(math.random(3, 7)) do
             if G.screenGui and G.screenGui.Parent then
@@ -180,7 +172,6 @@ local function startSecurity()
         end
     end)
 
-    -- Періодичне глибоке перейменування всіх нащадків
     task.spawn(function()
         while task.wait(math.random(5, 12)) do
             if G.screenGui and math.random() > 0.7 then
