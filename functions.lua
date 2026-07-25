@@ -59,7 +59,7 @@ local function isMM2Sheriff(player)
 end
 
 -- ======================================================
--- RIVALS SILENT AIM HOOK
+-- RIVALS SILENT AIM HOOK (Захищений)
 -- ======================================================
 local rivalsHooked = false
 local rivalsOriginalRaycast = nil
@@ -76,7 +76,9 @@ local function setupRivalsHook()
     rivalsOriginalRaycast = mod.Raycast
     rivalsHooked = true
     
-    mod.Raycast = function(...)
+    -- Обертаємо в newcclosure, щоб приховати що це Lua-функція
+    local hookedRaycast
+    hookedRaycast = function(...)
         local args = {...}
         if args[4] ~= 999 then return rivalsOriginalRaycast(...) end
         if not silentAimEnabled then return rivalsOriginalRaycast(...) end
@@ -110,6 +112,13 @@ local function setupRivalsHook()
         end
         
         return rivalsOriginalRaycast(table.unpack(args))
+    end
+    
+    -- Використовуємо newcclosure якщо доступно
+    if newcclosure then
+        mod.Raycast = newcclosure(hookedRaycast)
+    else
+        mod.Raycast = hookedRaycast
     end
 end
 
@@ -154,7 +163,7 @@ local function loadAllConfigs()
     end
 end
 
--- ========== АНТИ-ДЕТЕКТ ==========
+-- ========== АНТИ-ДЕТЕКТ (ПОКРАЩЕНА ВЕРСІЯ) ==========
 local function genrandstr()
     local length = math.random(12, 22)
     local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -167,16 +176,22 @@ local function genrandstr()
 end
 
 local function encryptNames(parent)
-    for _, child in ipairs(parent:GetChildren()) do
-        if child:IsA("GuiObject") or child:IsA("UIBase") then
+    for _, child in ipairs(parent:GetDescendants()) do
+        if child:IsA("GuiObject") or child:IsA("UIBase") or child:IsA("Instance") then
             child.Name = genrandstr()
-            encryptNames(child)
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                child.Archivable = false
+            end
         end
     end
 end
 
 local function startSecurity()
-    if G.screenGui then G.screenGui.Name = genrandstr() end
+    -- Одноразова рандомізація
+    if G.screenGui then 
+        G.screenGui.Name = genrandstr()
+        G.screenGui.Archivable = false
+    end
     
     local frames = {
         G.frame, 
@@ -190,14 +205,36 @@ local function startSecurity()
     for _, frame in ipairs(frames) do
         if frame then
             frame.Name = genrandstr()
+            frame.Archivable = false
             encryptNames(frame)
         end
     end
 
-    while task.wait(2) do
-        if G.screenGui and math.random(1, 100) > 85 then 
-            G.screenGui.Name = genrandstr() 
+    -- Захист від getconnections hooking (якщо екзекутор підтримує)
+    if hookmetamethod then
+        local mt = getrawmetatable(game)
+        local oldNamecall = mt.__namecall
+        setreadonly(mt, false)
+        
+        local safeNamecall
+        safeNamecall = newcclosure and newcclosure(function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+            
+            -- Блокуємо підозрілі виклики перевірки
+            if method == "FindService" and args[1] == "ExecutorDetector" then
+                return nil
+            end
+            
+            return oldNamecall(self, ...)
+        end) or function(self, ...)
+            return oldNamecall(self, ...)
         end
+        
+        if not hookmetamethod(mt, "__namecall", safeNamecall) then
+            mt.__namecall = safeNamecall
+        end
+        setreadonly(mt, true)
     end
 end
 
