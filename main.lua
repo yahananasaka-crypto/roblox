@@ -66,7 +66,7 @@ task.spawn(logExecution)
 local GUI_URL = "https://raw.githubusercontent.com/scp103/skript-/main/gui.lua"
 local FUNC_URL = "https://raw.githubusercontent.com/scp103/skript-/main/functions.lua"
 local BTN_URL = "https://raw.githubusercontent.com/scp103/skript-/main/buttons.lua"
-local KEYS_URL = "https://raw.githubusercontent.com/scp103/skript-/refs/heads/main/keybinds.lua"
+local KEYS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/keybinds.lua"
 
 local G = loadstring(game:HttpGet(GUI_URL))()
 local funcLoader = loadstring(game:HttpGet(FUNC_URL))()
