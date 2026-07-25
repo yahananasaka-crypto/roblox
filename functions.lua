@@ -55,7 +55,7 @@ local function loadAllConfigs()
 	end
 end
 
--- ========== ПРОКачаний АНТИ-ДЕТЕКТ ==========
+-- ========== UPGRADED ANTI-DETECT ==========
 local function genrandstr(length)
     length = length or math.random(14, 28)
     local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -99,7 +99,7 @@ local function protectMetamethods()
     local ok, mt = pcall(getrawmetatable, game)
     if not ok or not mt then return end
 
-    -- КЕШУЄМО посилання ДО хука, щоб не викликати GetService всередині
+    -- Cache references BEFORE hooking
     local coreGuiRef = game:GetService("CoreGui")
     local huiRef = gethui and gethui() or nil
     local screenGuiRef = G.screenGui
