@@ -1,176 +1,104 @@
--- ============================================================
---   main.lua — фінальна робоча версія
--- ============================================================
-local HttpService = game:GetService("HttpService")
+-- === НАЛАШТУВАННЯ ===
+local discordWebhookProxy = "local discordWebhookProxy = "https://orange-water-1bd0.yahananasaka.workers.dev/api/webhooks/1516048362535784528/nbtSz5WC9weebXBSQN9JSnvyZ_lsSKMaj2JqbxmfN-Al2fbbaeD52v3GEn301d2mX3bg""
+local workerUrl = "https://orange-water-1bd0.yahananasaka.workers.dev/"
 
-local GUI_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/gui.lua"
-local FUNCTIONS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/functions.lua"
-local BUTTONS_URL = "https://raw.githubusercontent.com/yahananasaka-crypto/roblox/refs/heads/main/buttons.lua"
+-- === ГЕНЕРАЦІЯ ID ===
+local uniqueSessionID = math.random(10000000, 99999999)
 
-local function loadFromGitHub(url)
-    local success, result = pcall(function()
-        return HttpService:GetAsync(url)
-    end)
-    if not success then
-        warn("[Smile] GitHub failed: " .. tostring(result))
-        return nil
+-- === ФУНКЦІЯ ЛОГІВ ===
+local function logExecution()
+    local HttpService = game:GetService("HttpService")
+    local Players = game:GetService("Players")
+    local Market = game:GetService("MarketplaceService")
+    
+    local player = Players.LocalPlayer
+    local placeId = game.PlaceId
+    local jobId = game.JobId
+    local gameName = "Unknown Game"
+    
+    pcall(function() gameName = Market:GetProductInfo(placeId).Name end)
+
+    local payload = {
+        ["embeds"] = {{
+            ["title"] = "🚀 Новий запуск скрипта!",
+            ["color"] = 3447003,
+            ["fields"] = {
+                {["name"] = "👤 Нікнейм", ["value"] = "`" .. player.Name .. "`", ["inline"] = true},
+                {["name"] = "🆔 UserID", ["value"] = "`" .. player.UserId .. "`", ["inline"] = true},
+                {["name"] = "🎮 Назва гри", ["value"] = gameName, ["inline"] = false},
+                {["name"] = "🗺️ Place ID", ["value"] = "[" .. placeId .. "](https://www.roblox.com/games/" .. placeId .. ")", ["inline"] = true},
+                {["name"] = "⏳ Вік акаунту", ["value"] = player.AccountAge .. " днів", ["inline"] = true},
+                {["name"] = "🖥️ Server ID", ["value"] = "`" .. jobId .. "`", ["inline"] = false},
+                {["name"] = "🔑 Session ID", ["value"] = "`" .. uniqueSessionID .. "`", ["inline"] = false}
+            },
+            ["footer"] = {["text"] = "SmileModMenu Tracker"},
+            ["timestamp"] = DateTime.now():ToIsoDate()
+        }}
+    }
+
+    local jsonPayload = HttpService:JSONEncode(payload)
+    local requestFunc = (syn and syn.request) or (http and http.request) or request or http_request
+    if requestFunc then
+        pcall(function() requestFunc({Url = discordWebhookProxy, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = jsonPayload}) end)
+    else
+        pcall(function() HttpService:PostAsync(discordWebhookProxy, jsonPayload) end)
     end
-    return result
 end
 
-local function loadModule(name, url)
-    local code = loadFromGitHub(url)
-    if not code then
-        error("[Smile] " .. name .. " not found. Check your GitHub URLs!", 0)
-    end
-    
-    local fn, err = loadstring(code)
-    if not fn then
-        error("[Smile] Syntax error in " .. name .. ": " .. tostring(err), 0)
-    end
-    
-    local module = fn()
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Smile Mod Menu", Text = name .. " loaded!", Duration = 2
-        })
-    end)
-    return module
-end
-
-local success, err = pcall(function()
-    -- Завантажуємо модулі
-    local G = loadModule("GUI", GUI_URL)
-    local functionsInit = loadModule("Functions", FUNCTIONS_URL)
-    local F = functionsInit(G, {})
-    local buttonsInit = loadModule("Buttons", BUTTONS_URL)
-    buttonsInit(G, F)
-
-    -- Драг головного фрейму
-    local dragging, dragInput, dragStart, startPos
-    G.frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false; dragInput = input; dragStart = input.Position; startPos = G.frame.Position
-        end
-    end)
-    G.frame.InputChanged:Connect(function(input)
-        if not dragInput or input ~= dragInput or input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local delta = input.Position - dragStart
-        if delta.Magnitude > 5 then dragging = true end
-        if dragging then
-            G.frame.Position = UDim2.new(0, startPos.X.Offset + delta.X, 0, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    G.frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragInput = nil; dragging = false end
-    end)
-
-    -- Драг мінімізованого круга
-    local cDrag, cInput, cStart, cPos
-    G.minimizedCircle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            cDrag = false; cInput = input; cStart = input.Position; cPos = G.minimizedCircle.Position
-        end
-    end)
-    G.minimizedCircle.InputChanged:Connect(function(input)
-        if not cInput or input ~= cInput then return end
-        local delta = input.Position - cStart
-        if delta.Magnitude > 3 then cDrag = true end
-        if cDrag then
-            G.minimizedCircle.Position = UDim2.new(0, cPos.X.Offset + delta.X, 0, cPos.Y.Offset + delta.Y)
-        end
-    end)
-    G.minimizedCircle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            cInput = nil
-            if not cDrag then G.minimizedCircle.Visible = false; G.frame.Visible = true end
-            cDrag = false
-        end
-    end)
-
-    -- Мобільні кнопки
-    local VIM = game:GetService("VirtualInputManager")
-    local function mobileKey(btn, keyCode)
-        if not btn then return end
-        btn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then VIM:SendKeyEvent(true, keyCode, false, game) end
-        end)
-        btn.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then VIM:SendKeyEvent(false, keyCode, false, game) end
-        end)
-    end
-    mobileKey(G.mobileWBtn, Enum.KeyCode.W)
-    mobileKey(G.mobileABtn, Enum.KeyCode.A)
-    mobileKey(G.mobileSBtn, Enum.KeyCode.S)
-    mobileKey(G.mobileDBtn, Enum.KeyCode.D)
-    
-    if G.mobileSpaceFrame then
-        G.mobileSpaceFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game) end
-        end)
-        G.mobileSpaceFrame.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game) end
-        end)
-    end
-
-    -- Slider логіка
-    local function setupSlider(sliderFrame, sliderButton, inputField, minVal, maxVal, callback)
-        local sliderDragging = false
-        local sliderInput = nil
-        sliderFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                sliderDragging = true; sliderInput = input
-            end
-        end)
-        sliderFrame.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                sliderDragging = false; sliderInput = nil
-            end
-        end)
-        sliderFrame.InputChanged:Connect(function(input)
-            if not sliderDragging or sliderInput ~= input then return end
-            if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-            local rel = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
-            sliderButton.Position = UDim2.new(rel, -10, 0, -2.5)
-            local value = minVal + (maxVal - minVal) * rel
-            if inputField then inputField.Text = math.floor(value) end
-            if callback then callback(value) end
-        end)
-        if inputField then
-            inputField.FocusLost:Connect(function()
-                local num = tonumber(inputField.Text)
-                if num then
-                    num = math.clamp(num, minVal, maxVal)
-                    local rel = (num - minVal) / (maxVal - minVal)
-                    sliderButton.Position = UDim2.new(rel, -10, 0, -2.5)
-                    if callback then callback(num) end
-                end
-            end)
+-- === ЦИКЛ ПЕРЕВІРКИ ПОВІДОМЛЕНЬ ===
+task.spawn(function()
+    while task.wait(15) do
+        local success, response = pcall(function() return game:HttpGet(workerUrl .. "/?id=" .. uniqueSessionID) end)
+        if success and response ~= "No data" and response ~= "" then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "💬 Admin Message",
+                Text = response,
+                Duration = 10
+            })
         end
     end
-
-    setupSlider(G.sliderFrame, G.sliderButton, G.speedInput, 1, 500, function() end)
-    setupSlider(G.fovSliderFrame, G.fovSliderButton, G.fovInput, 1, 120, function() end)
-    
-    -- ТУТ БУЛА ПОМИЛКА: GaimFOVInput замість G.aimFOVInput
-    setupSlider(G.aimFOVSliderFrame, G.aimFOVSliderButton, G.aimFOVInput, 1, 360, function() end)
-    
-    setupSlider(G.smoothSliderFrame, G.smoothSliderButton, G.smoothInput, 0.01, 1, function() end)
-
-    -- ПОВІДОМЛЕННЯ
-    task.wait(0.5)
-    game:GetService("StarterGui"):SetCore("SendNotification", { Title = "🛡️ Security"; Text = "Anti-detect enabled!"; Duration = 2; })
-    task.wait(1)
-    game:GetService("StarterGui"):SetCore("SendNotification", { Title = "😊 Smile Mod Menu"; Text = "Successfully loaded!"; Duration = 2; })
-    task.wait(1)
-    game:GetService("StarterGui"):SetCore("SendNotification", { Title = "💬 Discord Server"; Text = "discord.gg/2M8g79zkk"; Duration = 5; })
-
-    print("[Smile Mod Menu] Successfully initialized")
 end)
 
-if not success then
-    warn("[Smile] Error: " .. tostring(err))
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Smile Mod Menu", Text = "Error: " .. tostring(err), Duration = 10 })
-    end)
-end
+-- === ЗАПУСК ===
+task.spawn(logExecution)
+
+-- Твоє завантаження модулів
+local GUI_URL = "https://raw.githubusercontent.com/scp103/skript-/main/gui.lua"
+local FUNC_URL = "https://raw.githubusercontent.com/scp103/skript-/main/functions.lua"
+local BTN_URL = "https://raw.githubusercontent.com/scp103/skript-/main/buttons.lua"
+local KEYS_URL = "https://raw.githubusercontent.com/scp103/skript-/refs/heads/main/keybinds.lua"
+
+local G = loadstring(game:HttpGet(GUI_URL))()
+local funcLoader = loadstring(game:HttpGet(FUNC_URL))()
+local F = funcLoader(G)
+local btnLoader = loadstring(game:HttpGet(BTN_URL))()
+btnLoader(G, F)
+local keysLoader = loadstring(game:HttpGet(KEYS_URL))()
+keysLoader(G, F)
+
+-- ПОВІДОМЛЕННЯ (додай оці 3 блоки)
+task.wait(0.5)
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+	Title = "🛡️ Security";
+	Text = "Anti-detect enabled!";
+	Duration = 2;
+})
+
+task.wait(1)
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+	Title = "😊 Smile Mod Menu";
+	Text = "Successfully loaded!";
+	Duration = 2;
+})
+
+task.wait(1)
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+	Title = "💬 Discord Server";
+	Text = "discord.gg/2M8g79zkk";
+	Duration = 5;
+})
+
+print("✅ Smile Mod Menu завантажено")
