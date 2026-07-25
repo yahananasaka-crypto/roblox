@@ -1,5 +1,5 @@
 -- === НАЛАШТУВАННЯ ===
-local discordWebhookProxy = "local discordWebhookProxy = "https://orange-water-1bd0.yahananasaka.workers.dev/api/webhooks/1516048362535784528/nbtSz5WC9weebXBSQN9JSnvyZ_lsSKMaj2JqbxmfN-Al2fbbaeD52v3GEn301d2mX3bg"
+local discordWebhookProxy = "https://orange-water-1bd0.yahananasaka.workers.dev/api/webhooks/1516048362535784528/nbtSz5WC9weebXBSQN9JSnvyZ_lsSKMaj2JqbxmfN-Al2fbbaeD52v3GEn301d2mX3bg"
 local workerUrl = "https://orange-water-1bd0.yahananasaka.workers.dev/"
 
 -- === ГЕНЕРАЦІЯ ID ===
@@ -76,29 +76,29 @@ btnLoader(G, F)
 local keysLoader = loadstring(game:HttpGet(KEYS_URL))()
 keysLoader(G, F)
 
--- ПОВІДОМЛЕННЯ (додай оці 3 блоки)
+-- ПОВІДОМЛЕННЯ
 task.wait(0.5)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-	Title = "🛡️ Security";
-	Text = "Anti-detect enabled!";
-	Duration = 2;
+    Title = "🛡️ Security";
+    Text = "Anti-detect enabled!";
+    Duration = 2;
 })
 
 task.wait(1)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-	Title = "😊 Smile Mod Menu";
-	Text = "Successfully loaded!";
-	Duration = 2;
+    Title = "😊 Smile Mod Menu";
+    Text = "Successfully loaded!";
+    Duration = 2;
 })
 
 task.wait(1)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-	Title = "💬 Discord Server";
-	Text = "discord.gg/2M8g79zkk";
-	Duration = 5;
+    Title = "💬 Discord Server";
+    Text = "discord.gg/2M8g79zkk";
+    Duration = 5;
 })
 
 print("✅ Smile Mod Menu завантажено")
