@@ -55,7 +55,7 @@ local function loadAllConfigs()
 	end
 end
 
--- ========== UPGRADED ANTI-DETECT ==========
+-- ========== ПРОКачаний АНТИ-ДЕТЕКТ ==========
 local function genrandstr(length)
     length = length or math.random(14, 28)
     local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -99,7 +99,7 @@ local function protectMetamethods()
     local ok, mt = pcall(getrawmetatable, game)
     if not ok or not mt then return end
 
-    -- Cache references BEFORE hooking
+    -- КЕШУЄМО посилання ДО хука, щоб не викликати GetService всередині
     local coreGuiRef = game:GetService("CoreGui")
     local huiRef = gethui and gethui() or nil
     local screenGuiRef = G.screenGui
@@ -2085,6 +2085,35 @@ updateAimFOVSlider()
 -- Завантажуємо конфіги при старті 
 loadAllConfigs()
 updateConfigList()
+
+local godModeConnection = nil
+
+local function startGodMode()
+    godModeConnection = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.MaxHealth = math.huge
+                hum.Health = math.huge
+            end
+        end
+    end)
+end
+
+local function stopGodMode()
+    if godModeConnection then
+        godModeConnection:Disconnect()
+        godModeConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.MaxHealth = 100
+        end
+    end
+end
 
 -- Повертаємо всі функції для buttons.lua
 return {
